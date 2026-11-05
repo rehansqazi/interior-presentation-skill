@@ -63,14 +63,18 @@ def collect(root, tmp):
         if n.lower() in ('company', 'company details', 'company info'): company = p; continue
         sections.append(p)
     slides = []
-    def walk(d, parent):
+    def walk(d, trail):
         imgs, notes = files_in(d, tmp)
-        if imgs: slides.append(dict(title=clean(d), parent=parent, imgs=imgs, notes=notes))
+        if imgs: slides.append(dict(title=clean(d), parent=' · '.join(trail) or None, trail=trail, imgs=imgs, notes=notes))
         for n in sorted(os.listdir(d), key=sortkey):
             p = os.path.join(d, n)
-            if os.path.isdir(p) and not n.startswith('.'): walk(p, clean(d))
-    for s in sections: walk(s, None)
-    return company, slides
+            if os.path.isdir(p) and not n.startswith('.'): walk(p, trail + [clean(d)])
+    groups = []
+    for s in sections:
+        subs = [clean(n) for n in sorted(os.listdir(s), key=sortkey) if os.path.isdir(os.path.join(s, n)) and not n.startswith('.')]
+        start = len(slides); walk(s, [])
+        if subs: groups.append(dict(title=clean(s), at=start, rooms=subs, n=len(groups) + 1))
+    return company, slides, groups
 
 CSS = '''@page{size:1440px 810px;margin:0}*{box-sizing:border-box;margin:0;padding:0}
 body{background:#888;font-family:"Cormorant Garamond",Georgia,serif;color:#2b2925}
@@ -93,6 +97,11 @@ h1{font-weight:400;font-size:68px;letter-spacing:.06em;text-transform:uppercase;
 .grid{display:grid;gap:16px;height:100%;min-height:0}
 .notes{align-self:end;border-top:1px solid #c9c3b5;padding-top:22px}
 .notes h2{font-weight:400;font-size:34px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+.crumb{position:absolute;top:20px;left:60px;font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:#8a8375}
+.div{display:grid;grid-template-columns:1fr 520px;gap:60px;height:100%;align-items:end}
+.div .num{font-size:120px;line-height:1;color:var(--side);font-weight:400}
+.div h1{margin-top:6px}.div ul{list-style:none;margin-top:26px;border-top:1px solid #c9c3b5;padding-top:18px;columns:2;column-gap:40px}
+.div li{font-size:20px;letter-spacing:.12em;text-transform:uppercase;line-height:2;color:#4a463f}
 .notes p{font-size:19px;line-height:1.5;margin-bottom:12px;color:#4a463f;white-space:pre-line}'''
 
 def esc(s): return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -127,13 +136,14 @@ def slide_html(s, logo, MAX=6):
         if s['notes'] and i == 0:
             body = ''.join(f'<p>{esc(l)}</p>' for l in s['notes'].split('\n\n'))
             cols.append('320px'); parts.append(f'<div class="notes"><h2>{esc(s["title"].title())}</h2>{body}</div>')
-        out.append(f'<section class="slide">{sidebar(title, logo)}<main><div class="lay" style="grid-template-columns:{" ".join(cols)}">{"".join(parts)}</div></main></section>')
+        crumb = f'<div class="crumb">{esc(s["parent"])}</div>' if s.get('parent') else ''
+        out.append(f'<section class="slide">{sidebar(title, logo)}<main>{crumb}<div class="lay" style="grid-template-columns:{" ".join(cols)}">{"".join(parts)}</div></main></section>')
     return out
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('root'); ap.add_argument('out'); ap.add_argument('--title'); ap.add_argument('--side', default='#d1cdc1')
     a = ap.parse_args(); tmp = tempfile.mkdtemp()
-    company, slides = collect(a.root, tmp)
+    company, slides, groups = collect(a.root, tmp)
     info, logos = read_company(company)
     title = (a.title or info.get('project') or info.get('title') or clean(a.root)).upper()
     logo = b64(logos[0], 400) if logos else None
@@ -143,13 +153,22 @@ def main():
         for p in s['imgs']:
             if p in hero and p not in seen: pick.append(p); seen.add(p); break
     pick = (pick + [p for p in hero if p not in seen])[:4]
-    sub = info.get('subtitle') or ' · '.join(s['title'].title() for s in slides[:6])
+    sub = info.get('subtitle') or ' · '.join(g['title'].title() for g in groups) or ' · '.join(s['title'].title() for s in slides[:6])
     kick = info.get('kicker') or info.get('client') or 'Interior Concept Board'
     tl = f'<img class="tl" src="{logo}">' if logo else ''
     br = '<div class="br">' + ''.join(f'<img src="{b64(p, 500)}">' for p in logos[1:3]) + '</div>' if len(logos) > 1 else ''
     heroh = f'<div class="hero" style="grid-template-columns:repeat({max(1,len(pick))},1fr)">' + ''.join(fig(b64(p)) for p in pick) + '</div>'
     cover = f'<section class="slide">{sidebar(title, None)}<main class="cover">{heroh}<h1>{esc(title)}</h1><p class="kick">{esc(kick)}</p><p class="sub">{esc(sub)}</p>{tl}{br}</main></section>'
-    body = [cover] + [h for s in slides for h in slide_html(s, logo)]
+    def divider(g):
+        first = next((p for s in slides[g['at']:] for p in s['imgs'] if not p.endswith('#plan') and not PLAN.search(os.path.basename(p))), None)
+        img = fig(b64(first)) if first else '<div></div>'
+        rooms = ''.join(f'<li>{esc(r)}</li>' for r in g['rooms'])
+        return f'<section class="slide">{sidebar(g["title"], logo)}<main><div class="div"><div><div class="num">{g["n"]:02d}</div><h1>{esc(g["title"])}</h1><ul>{rooms}</ul></div>{img}</div></main></section>'
+    starts = {g['at']: g for g in groups}
+    body = [cover]
+    for i, s in enumerate(slides):
+        if i in starts: body.append(divider(starts[i]))
+        body += slide_html(s, logo)
     html = f'<!doctype html><html><head><meta charset="utf-8"><title>{esc(title.title())}</title><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"><style>:root{{--side:{info.get("color", a.side)}}}{CSS}</style></head><body>{"".join(body)}</body></html>'
     os.makedirs(a.out, exist_ok=True)
     base = os.path.join(a.out, f'{title} PPT'); open(base + '.html', 'w').write(html)

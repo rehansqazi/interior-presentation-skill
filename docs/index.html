@@ -68,6 +68,12 @@ details.help ul{padding-left:20px;color:#4a463f}
 .slide .grid{display:grid;gap:16px;height:100%;min-height:0}
 .slide .notes{align-self:end;border-top:1px solid #c9c3b5;padding-top:22px}
 .slide .notes h2{font-weight:400;font-size:34px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+.slide .crumb{position:absolute;top:20px;left:60px;font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:#8a8375}
+.slide .div{display:grid;grid-template-columns:1fr 520px;gap:60px;height:100%;align-items:end}
+.slide .div .num{font-size:120px;line-height:1;color:var(--side);font-weight:400}
+.slide .div h1{margin-top:6px}
+.slide .div ul{list-style:none;margin-top:26px;border-top:1px solid #c9c3b5;padding-top:18px;columns:2;column-gap:40px}
+.slide .div li{font-size:20px;letter-spacing:.12em;text-transform:uppercase;line-height:2;color:#4a463f}
 .slide .notes p{font-size:19px;line-height:1.5;margin-bottom:12px;color:#4a463f;white-space:pre-line}
 /* ---------- print = PDF ---------- */
 @page{size:1440px 810px;margin:0}
@@ -105,17 +111,20 @@ details.help ul{padding-left:20px;color:#4a463f}
   company/
     logo main.png        "main" in the name → sidebar + cover
     logo partner.png     other logos → bottom of cover
-    details.txt          project: Master Bedroom
-                         client: Client Residence
-  01 BEDROOM/
-    01 BED BACK WALL/    every folder with images = one slide
-      bed back sketch.jpg   sketch / plan / layout / elevation → left panel
-      ref 1.jpg
-      notes.txt          optional notes column
-    02 WARDROBE WALL/
-  02 WALK IN CLOSET/
-  03 BATH/</pre>
+    details.txt          project: Client Residence
+  01 GROUND FLOOR/       top-level folder with sub-folders → divider slide
+    01 LOUNGE/
+    02 GUEST BATHROOM/   every folder with images = one slide
+  02 FIRST FLOOR/
+    01 MASTER BEDROOM/
+      01 BED BACK WALL/
+        bed back sketch.jpg   sketch / plan / layout / elevation → left panel
+        ref 1.jpg
+        notes.txt          optional notes column
+      02 WARDROBE WALL/
+    02 MASTER BATH/</pre>
     <ul>
+      <li>Nest as deep as you like: floors, rooms, walls. Each slide shows where it sits (e.g. FIRST FLOOR · MASTER BEDROOM), and each floor gets a divider slide.</li>
       <li>Numbers at the start of folder names set the order and are removed from the titles.</li>
       <li>A PDF named "… plan.pdf" or "… sketch.pdf" is used as the plan (first page).</li>
       <li>Folders with more than 6 reference images are split across extra slides.</li>
@@ -202,7 +211,7 @@ async function readText(f){ return (await f.file.text()).trim(); }
 async function collect(root){
   let company=null; const slides=[];
   const names=Object.keys(root.dirs).sort(sortkey);
-  async function walk(d,parent){
+  async function walk(d,trail){
     const imgs=[], plans=[]; let notes='';
     for(const f of d.files.slice().sort((a,b)=>sortkey(base(a.path),base(b.path)))){
       const n=base(f.path), nl=n.toLowerCase();
@@ -210,10 +219,14 @@ async function collect(root){
       else if(/\.pdf$/i.test(n)&&PLAN.test(n)) plans.push({file:f.file,name:n,pdf:true});
       else if(['notes.txt','notes.md','description.txt'].includes(nl)) notes=await readText(f);
     }
-    if(imgs.length||plans.length) slides.push({title:clean(d.name),parent,imgs,plans,notes});
-    for(const k of Object.keys(d.dirs).sort(sortkey)) await walk(d.dirs[k],clean(d.name));
+    if(imgs.length||plans.length) slides.push({title:clean(d.name),parent:trail.join(' · ')||null,imgs,plans,notes});
+    for(const k of Object.keys(d.dirs).sort(sortkey)) await walk(d.dirs[k],[...trail,clean(d.name)]);
   }
-  for(const n of names){ if(COMPANY.includes(n.toLowerCase())){company=root.dirs[n];continue;} await walk(root.dirs[n],null); }
+  const groups=[];
+  for(const n of names){ if(COMPANY.includes(n.toLowerCase())){company=root.dirs[n];continue;}
+    const subs=Object.keys(root.dirs[n].dirs).sort(sortkey).map(k=>clean(k)), at=slides.length;
+    await walk(root.dirs[n],[]);
+    if(subs.length) groups.push({title:clean(n),at,rooms:subs,n:groups.length+1}); }
   const info={}, logos=[];
   if(company){
     for(const f of company.files){ const n=base(f.path);
@@ -223,7 +236,7 @@ async function collect(root){
     }
     logos.sort((a,b)=>(/(main|primary)/i.test(a.name)?0:1)-(/(main|primary)/i.test(b.name)?0:1)||a.name.localeCompare(b.name));
   }
-  return {rootName:root.name,company:!!company,info,logos,slides};
+  return {rootName:root.name,company:!!company,info,logos,slides,groups};
 }
 
 /* ---------- rendering ---------- */
@@ -249,13 +262,17 @@ async function render(){
   for(const s of d.slides) for(const i of s.imgs) if(!seen.has(i)){heroSrc.push(i);seen.add(i);}
   const pick=heroSrc.slice(0,4);
   const heroImgs=[]; for(const p of pick) heroImgs.push(await enc(p));
-  const sub=d.info.subtitle||d.slides.slice(0,6).map(s=>titleCase(s.title)).join(' · ');
+  const sub=d.info.subtitle||d.groups.map(g=>titleCase(g.title)).join(' · ')||d.slides.slice(0,6).map(s=>titleCase(s.title)).join(' · ');
   const kick=d.info.kicker||d.info.client||'Interior Concept Board';
   let br=''; if(d.logos.length>1){ const ls=[]; for(const l of d.logos.slice(1,3)) ls.push(`<img src="${await enc(l,500,true)}">`); br=`<div class="br">${ls.join('')}</div>`; }
   html.push(`<section class="slide">${sidebar(title,null)}<main class="cover"><div class="hero" style="grid-template-columns:repeat(${Math.max(1,pick.length)},1fr)">${heroImgs.map(s=>fig(s)).join('')}</div><h1>${esc(title)}</h1><p class="kick">${esc(kick)}</p><p class="sub">${esc(sub)}</p>${logo?`<img class="tl" src="${logo}">`:''}${br}</main></section>`);
   // content slides
-  let done=0;
-  for(const s of d.slides){
+  let done=0; const starts=new Map(d.groups.map(g=>[g.at,g]));
+  for(const [si,s] of d.slides.entries()){
+    if(starts.has(si)){ const g=starts.get(si);
+      const first=d.slides.slice(si).flatMap(x=>x.imgs)[0];
+      const im=first?fig(await enc(first)):'<div></div>';
+      html.push(`<section class="slide">${sidebar(g.title,logo)}<main><div class="div"><div><div class="num">${String(g.n).padStart(2,'0')}</div><h1>${esc(g.title)}</h1><ul>${g.rooms.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>${im}</div></main></section>`); }
     let plans=s.plans.slice(), refs=s.imgs.slice();
     if(plans.length&&!refs.length){ refs=plans.slice(1).filter(p=>!p.pdf); plans=plans.slice(0,1); }
     const chunks=[]; for(let i=0;i<refs.length;i+=6) chunks.push(refs.slice(i,i+6)); if(!chunks.length) chunks.push([]);
@@ -265,7 +282,8 @@ async function render(){
       if(plans.length){ cols.push('400px'); parts.push(`<div class="col">${fig(await enc(plans[0]),true)}<p class="cap">${esc(plans[0].pdf?'PLAN':clean(plans[0].name,true))}</p></div>`); }
       if(ch.length){ cols.push(ch.length===1&&!plans.length?'560px':'1fr'); const srcs=[]; for(const p of ch) srcs.push(await enc(p)); parts.push(grid(srcs)); }
       if(s.notes&&i===0){ cols.push('320px'); parts.push(`<div class="notes"><h2>${esc(titleCase(s.title))}</h2>${s.notes.split(/\n\s*\n/).map(p=>`<p>${esc(p)}</p>`).join('')}</div>`); }
-      html.push(`<section class="slide">${sidebar(t,logo)}<main><div class="lay" style="grid-template-columns:${cols.join(' ')}">${parts.join('')}</div></main></section>`);
+      const crumb=s.parent?`<div class="crumb">${esc(s.parent)}</div>`:'';
+      html.push(`<section class="slide">${sidebar(t,logo)}<main>${crumb}<div class="lay" style="grid-template-columns:${cols.join(' ')}">${parts.join('')}</div></main></section>`);
     }
     setStatus(`Building… ${++done}/${d.slides.length}`);
   }

@@ -22,18 +22,23 @@ CLIENT RESIDENCE/
     logo main.png        # "main" in the name -> sidebar + cover
     logo partner.png     # other logos -> bottom of cover
     details.txt          # project: ..., client: ..., subtitle: ..., color: #d1cdc1
-  01 BEDROOM/
-    01 BED BACK WALL/    # every folder with images = one slide
-      bed back sketch.jpg   # "sketch" / "plan" / "layout" / "elevation" -> left panel
-      ref 1.jpg
-      notes.txt          # optional notes column
-    02 WARDROBE WALL/
-  02 WALK IN CLOSET/
-  03 BATH/
+  01 GROUND FLOOR/       # top-level folder with sub-folders -> divider slide
+    01 LOUNGE/
+      01 FEATURE WALL/   # every folder with images = one slide
+        feature wall sketch.jpg   # "sketch" / "plan" / "layout" / "elevation" -> left panel
+        ref 1.jpg
+        notes.txt        # optional notes column
+    02 GUEST BATHROOM/
+  02 FIRST FLOOR/
+    01 MASTER BEDROOM/
+      01 BED BACK WALL/
+      02 WARDROBE WALL/
+    02 MASTER BATH/
 ```
 
 - Numbers at the start of folder names set the order and are removed from the titles.
-- Sub-folders become their own slides, nested as deep as you like.
+- Works for one room or a whole house: nest floors → rooms → walls as deep as you like.
+- Every slide shows where it sits (e.g. `FIRST FLOOR · MASTER BEDROOM`), and each floor gets a numbered divider slide.
 - A PDF named `... plan.pdf` or `... sketch.pdf` is used as the plan (first page).
 - Folders with more than 6 reference images are split across extra slides.
 
@@ -57,7 +62,7 @@ playwright install chromium
 python3 interior-presentation/scripts/build_deck.py "example/CLIENT RESIDENCE" out/
 ```
 
-This writes `out/MASTER BEDROOM PPT.html` and `out/MASTER BEDROOM PPT.pdf`. Images are embedded, so the HTML file works on its own.
+This writes `out/CLIENT RESIDENCE PPT.html` and `out/CLIENT RESIDENCE PPT.pdf`. Images are embedded, so the HTML file works on its own.
 
 ## License
 

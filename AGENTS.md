@@ -20,7 +20,8 @@ playwright install chromium
 
 1. Ask for (or locate) the project root folder. Its expected layout:
    - `company/`: logos (`logo main.png` is used in the sidebar and on the cover; other logos go at the bottom of the cover) and `details.txt` with `key: value` lines (`project`, `client`, `subtitle`, `kicker`, `color`).
-   - Every other folder (nested to any depth) that contains images becomes one slide, titled by the folder name. A leading number like `01 ` sets the order and is removed from the title.
+   - Every other folder (nested to any depth, e.g. floor → room → wall) that contains images becomes one slide, titled by the folder name, with its parent folders shown as a small location line. A leading number like `01 ` sets the order and is removed from the title.
+   - Each top-level folder with sub-folders (e.g. a floor) gets a numbered divider slide.
    - Images whose names contain `sketch`, `plan`, `layout`, `drawing`, `elevation` or `section` go in the left plan panel. A `notes.txt` in a folder adds a notes column to that slide.
 2. Run:
    ```bash
@@ -34,7 +35,7 @@ playwright install chromium
 ```bash
 python3 interior-presentation/scripts/build_deck.py "example/CLIENT RESIDENCE" out/
 ```
-The run should report 5 slides with no errors. If you change the layout, regenerate `docs/preview.png` from the example output, and open `docs/index.html` in a browser and choose `example/CLIENT RESIDENCE` to check that the web version still matches.
+The run should report 7 slides (cover, 2 floor dividers, 4 content slides) with no errors. If you change the layout, regenerate `docs/preview.png` from the example output, and open `docs/index.html` in a browser and choose `example/CLIENT RESIDENCE` to check that the web version still matches.
 
 ## Conventions
 

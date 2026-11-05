@@ -1,2 +1,2 @@
-project: Master Bedroom
-client: Client Residence
+project: Client Residence
+client: Interior Concept Board

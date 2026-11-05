@@ -5,7 +5,7 @@ description: Build an interior design concept presentation (HTML + PDF) from a p
 
 # Interior concept presentation from a folder
 
-Builds a board in a clean architectural-board style: a beige sidebar with the slide title in spaced vertical letters, the main logo at the bottom of the sidebar, and a white content area. Plans and sketches go in a bordered left panel, reference images fill a grid, and any notes go in a right column. The cover slide shows hero images, the project title and the logos. Output is `<PROJECT> PPT.html` and `<PROJECT> PPT.pdf` (1440x810 slides) saved in the project folder.
+Works for a single room or a whole house with multiple floors. Builds a board in a clean architectural-board style: a beige sidebar with the slide title in spaced vertical letters, the main logo at the bottom of the sidebar, and a white content area. Plans and sketches go in a bordered left panel, reference images fill a grid, and any notes go in a right column. The cover slide shows hero images, the project title and the logos. Output is `<PROJECT> PPT.html` and `<PROJECT> PPT.pdf` (1440x810 slides) saved in the project folder.
 
 ## Folder convention (tell the user this if they ask how to set it up)
 
@@ -15,15 +15,21 @@ Builds a board in a clean architectural-board style: a beige sidebar with the sl
     logo main.png               "main" or "primary" in the name -> sidebar + top-right of cover
     logo partner.png            other logos -> bottom-right of the cover
     details.txt                 "key: value" lines: project, client, subtitle, kicker, color (sidebar hex)
-  01 BEDROOM/                   each folder that contains images = one slide, titled by folder name
-    01 BED BACK WALL/           subfolders become their own slides (nest as deep as needed)
-      bed back sketch.jpg       name contains sketch/plan/layout/drawing/elevation/section -> left panel
-      ref 1.jpg ...
-      notes.txt                 optional; paragraphs separated by a blank line -> notes column
-    02 WARDROBE WALL/
-  02 WALK IN CLOSET/
-  03 BATH/
+  01 GROUND FLOOR/              top-level folder with sub-folders -> numbered divider slide
+    01 LOUNGE/
+      01 FEATURE WALL/          each folder that contains images = one slide, titled by folder name
+        feature wall sketch.jpg name contains sketch/plan/layout/drawing/elevation/section -> left panel
+        ref 1.jpg ...
+        notes.txt               optional; paragraphs separated by a blank line -> notes column
+    02 GUEST BATHROOM/
+  02 FIRST FLOOR/
+    01 MASTER BEDROOM/
+      01 BED BACK WALL/
+      02 WARDROBE WALL/
+    02 MASTER BATH/
 ```
+- Nest as deep as needed (floors -> rooms -> walls). Every slide shows a small location line at the top, e.g. `FIRST FLOOR · MASTER BEDROOM`, so same-named rooms on different floors are distinguishable.
+- Each top-level folder that has sub-folders gets a divider slide (number, name, list of rooms, one image). The cover subtitle lists these top-level folders. A single-room project with no sub-folders gets no dividers.
 - A leading number (`01 `, `02_`) sets the order and is removed from the title.
 - A PDF whose name contains "plan" or "sketch" is turned into an image from its first page and used as the plan.
 - Folders with more than 6 reference images are split across extra slides.
