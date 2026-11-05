@@ -131,7 +131,7 @@ def slide_html(s, logo, MAX=6):
         cols, parts = [], []
         if plans:
             cap = clean(plans[0]) if not plans[0].endswith('.png') or '/tmp' not in plans[0] else 'PLAN'
-            cols.append('400px'); parts.append(f'<div class="col">{fig(b64(plans[0]), True)}<p class="cap">{esc(cap)}</p></div>')
+            cols.append('400px' if ch else '1fr'); parts.append(f'<div class="col">{fig(b64(plans[0]), True)}<p class="cap">{esc(cap)}</p></div>')
         if ch: cols.append('560px' if len(ch) == 1 and not plans else '1fr'); parts.append(grid([b64(p) for p in ch]))
         if s['notes'] and i == 0:
             body = ''.join(f'<p>{esc(l)}</p>' for l in s['notes'].split('\n\n'))

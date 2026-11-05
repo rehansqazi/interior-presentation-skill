@@ -279,7 +279,7 @@ async function render(){
     for(let i=0;i<chunks.length;i++){
       const ch=chunks[i], cols=[], parts=[];
       const t=s.title+(chunks.length>1&&i?` ${i+1}`:'');
-      if(plans.length){ cols.push('400px'); parts.push(`<div class="col">${fig(await enc(plans[0]),true)}<p class="cap">${esc(plans[0].pdf?'PLAN':clean(plans[0].name,true))}</p></div>`); }
+      if(plans.length){ cols.push(ch.length?'400px':'1fr'); parts.push(`<div class="col">${fig(await enc(plans[0]),true)}<p class="cap">${esc(plans[0].pdf?'PLAN':clean(plans[0].name,true))}</p></div>`); }
       if(ch.length){ cols.push(ch.length===1&&!plans.length?'560px':'1fr'); const srcs=[]; for(const p of ch) srcs.push(await enc(p)); parts.push(grid(srcs)); }
       if(s.notes&&i===0){ cols.push('320px'); parts.push(`<div class="notes"><h2>${esc(titleCase(s.title))}</h2>${s.notes.split(/\n\s*\n/).map(p=>`<p>${esc(p)}</p>`).join('')}</div>`); }
       const crumb=s.parent?`<div class="crumb">${esc(s.parent)}</div>`:'';
